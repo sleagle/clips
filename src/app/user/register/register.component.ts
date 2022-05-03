@@ -1,6 +1,9 @@
 import { Component } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { AngularFireAuth } from '@angular/fire/compat/auth';
+import { AuthService } from 'src/app/services/auth.service';
+import { EmailTaken } from '../validators/email-taken';
+import { RegisterValidators } from '../validators/register-validators';
+
 
 @Component({
   selector: 'app-register',
@@ -9,12 +12,12 @@ import { AngularFireAuth } from '@angular/fire/compat/auth';
 })
 export class RegisterComponent {
 
-  constructor(private auth: AngularFireAuth) {}
+  constructor(private auth: AuthService, private emailTaken: EmailTaken) {}
 
   inSubmission = false;
 
   name = new FormControl('', [Validators.required, Validators.minLength(3)])
-  email = new FormControl('', [Validators.required, Validators.email])
+  email = new FormControl('', [Validators.required, Validators.email], [this.emailTaken.validate])
   age = new FormControl('', [Validators.required, Validators.min(18), Validators.max(120)])
   password = new FormControl('', [Validators.required, Validators.pattern(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm)])
   confirm_password = new FormControl('', [Validators.required])
@@ -31,7 +34,7 @@ export class RegisterComponent {
     password: this.password,
     confirm_password: this.confirm_password,
     phoneNumber: this.phoneNumber
-  })
+  }, [RegisterValidators.match('password', 'confirm_password')])
 
   async register() {
     this.showAlert = true;
@@ -39,12 +42,8 @@ export class RegisterComponent {
     this.alertColor = "blue"
     this.inSubmission = true;
 
-    const {email, password} = this.registerForm.value
-
-    try {
-      const userCred = await this.auth.createUserWithEmailAndPassword(email, password)
-      console.log(userCred);
-      
+    try {  
+      await this.auth.createUser(this.registerForm.value)
     } catch (e) {
       console.error(e);
       this.alertMsg = 'An unexpected error occurred. Please try again later'
